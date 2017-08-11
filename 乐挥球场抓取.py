@@ -1,0 +1,102 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# @Time    : 2017/7/26 下午4:51
+# @Author  : Aries
+# @Site    : 
+# @File    : 乐挥球场抓取.py
+# @Software: PyCharm
+
+import requests
+from lxml import etree
+import time
+import json
+import re
+import csv
+import sys
+import MySQLdb
+
+reload(sys)
+sys.setdefaultencoding("utf-8") #更改默认编码为utf-8
+headers = {
+    'Cookie':'ipLoc-djd=1-72-2799-0; unpl=V2_ZzNtbRZXF0dwChEEfxtbV2IKFQ4RUBcSdg1PVSgZCVAyCkBVclRCFXMUR1NnGFkUZgoZXkpcQxNFCHZXchBYAWcCGllyBBNNIEwHDCRSBUE3XHxcFVUWF3RaTwEoSVoAYwtBDkZUFBYhW0IAKElVVTUFR21yVEMldQl2VH4RWAVmBxVeS19AEHUJR1x6GFsBYQEibUVncyVyDkBQehFsBFcCIh8WC0QcdQ1GUTYZWQ1jAxNZRVRKHXYNRlV6EV0EYAcUX3JWcxY%3d; __jdv=122270672|baidu-pinzhuan|t_288551095_baidupinzhuan|cpc|0f3d30c8dba7459bb52f2eb5eba8ac7d_0_e1ec43fa536c486bb6e62480b1ddd8c9|1496536177759; mt_xid=V2_52007VwMXWllYU14YShBUBmIDE1NVWVNdG08bbFZiURQBWgxaRkhKEQgZYgNFV0FRVFtIVUlbV2FTRgJcWVNcSHkaXQVhHxNVQVlXSx5BEl0DbAMaYl9oUmofSB9eB2YGElBtWFdcGA%3D%3D; __jda=122270672.14951056289241009006573.1495105629.1496491774.1496535400.5; __jdb=122270672.26.14951056289241009006573|5.1496535400; __jdc=122270672; 3AB9D23F7A4B3C9B=EJMY3ATK7HCS7VQQNJETFIMV7BZ5NCCCCSWL3UZVSJBDWJP3REWXTFXZ7O2CDKMGP6JJK7E5G4XXBH7UA32GN7EVRY; __jdu=14951056289241009006573',
+    'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36'
+}
+
+
+#fp = open('/Users/hukezhu/Desktop/wenxiong1.csv','wt')
+#writer = csv.writer(fp)
+#writer.writerow(('content','creationTime','productColor','productSize','userClientShow','userLevelName'))
+#
+db = MySQLdb.connect(host='127.0.0.1',user='root',passwd='123456',db='YUNGAO',charset='utf8')
+cursor = db.cursor()
+
+# cursor.execute("DROP TABLE IF EXISTS LEHUI")
+#
+# #sql = """CREATE TABLE YUNGAO11 {ID INT NOT NULL,name CHAR(200),price CHAR(200),web CHAR(200)}"""
+# sql = """CREATE TABLE LEHUI (
+#         ID INT NOT NULL,
+#         name  CHAR(200),
+#         price  CHAR(200),
+#         web   CHAR(200))"""
+#
+# cursor.execute(sql)
+
+
+
+
+def get_id(url):
+    html = requests.get(url, headers=headers)
+    # print html.text
+    selector = etree.HTML(html.text)
+    infos = selector.xpath('//div[@class="placeList floatLeft"]/a')
+    for info in infos:
+        try:
+            #print info.xpath('text()')[0] + "  " + "http://www.bookingtee.com/"+info.xpath('@href')[0]
+            #print "http://www.bookingtee.com/"+info.xpath('@href')[0]
+            #print info.text + '   ' +  'http://www.teekart.com' + info.get('href')
+            # try:
+            # db.set_character_set('utf8')
+            get_comment_info("http://www.teekart.com"+info.xpath('@href')[0])
+        except IndexError:
+            pass
+
+
+
+
+
+def get_comment_info(url):
+    print url
+    html = requests.get(url, headers=headers)
+    # print html.text
+    selector = etree.HTML(html.text)
+    courseinfo = selector.xpath('//ul[@class="specialGolf-list bookList"]/li')
+
+    for course in courseinfo:
+        try:
+            #
+            # MySQLdb.escape_string(course.xpath('div[2]/div/div/p/span[1]')[0].text)
+            # 这个是获取球场多少洞的,但是现在获取失败
+            #
+            content = course.xpath('div[1]/p/a')[0].text + '    ' +  "http://www.teekart.com"+ course.xpath('div[1]/p/a')[0].get('href')
+            content = MySQLdb.escape_string(content)
+            #print  course.xpath('div[2]/div/div/p/span[1]/span')[0].text
+            print '插入成功'
+            sql1 = "INSERT INTO LEHUI(name,price, web) \
+                               VALUES ('%s', '%s', '%s')" % \
+                   (course.xpath('div[1]/p/a')[0].text, course.xpath('div[2]/div/div/p/span[1]/span')[0].text, "http://www.teekart.com"+ course.xpath('div[1]/p/a')[0].get('href'))
+            # try:
+            # db.set_character_set('utf8')
+            cursor.execute(sql1)
+            print "保存成功"
+            db.commit()
+            # except:
+            #     db.rollback()
+            #     print "保存失败"
+        except IndexError:
+            pass
+
+        time.sleep(2)
+
+if __name__ == '__main__':
+    url = 'http://www.teekart.com/zh/golf-region/beijing.html'
+    get_id(url)
