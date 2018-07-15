@@ -73,7 +73,7 @@ def get_poem_detail(title,author,url):
     html = requests.get(url)
     selector = etree.HTML(html.text)
     source = selector.xpath('//p[@class="source"]/a[1]/text()')[0] #唐代
-    poem = selector.xpath('//div[@class="contson"]//text()')[0] #//*[@id="contson45c396367f59"]/text()[2]  //*[@id="contson45c396367f59"]/text()[2]
+    poem = selector.xpath('//div[@class="contson"]')[0].xpath('string(.)') #//*[@id="contson45c396367f59"]/text()[2]  //*[@id="contson45c396367f59"]/text()[2]
     poem = MySQLdb.escape_string(poem)
     print poem
 
